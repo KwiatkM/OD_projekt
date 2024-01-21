@@ -1,2 +1,4 @@
 .venv/
 planing/
+__pycache__/
+db_init.sql
