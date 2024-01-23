@@ -1,14 +1,14 @@
-from flask import Flask, render_template, url_for, redirect
+from flask import Flask, render_template, url_for, redirect, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, EmailField
-from wtforms.validators import InputRequired, Length, ValidationError
+from wtforms import StringField, PasswordField, SubmitField, EmailField, DecimalField
+from wtforms.validators import InputRequired, Length, ValidationError, Regexp
 from flask_bcrypt import Bcrypt
 from os import urandom
 from Crypto.Cipher import AES
 import pyotp
-import qrcode
+from time import sleep
 #import sqlite3
 
 app = Flask(__name__)
@@ -29,6 +29,7 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 
+
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(30), nullable=False, unique=True)
@@ -36,6 +37,8 @@ class User(db.Model, UserMixin):
     salt = db.Column(db.String(64), nullable=False)
     password = db.Column(db.String(128), nullable=False)
     TOTP_secret = db.Column(db.String(160), nullable=False)
+    
+    
     
 
 
@@ -82,6 +85,11 @@ class LoginForm(FlaskForm):
 
     submit = SubmitField('Login')
 
+class AuthenticationForm(FlaskForm):
+    code = StringField(validators=[
+                           InputRequired(), Regexp('^[0-9]{1,6}$', message='Niepoprawny kod')], render_kw={"placeholder": "Code"})
+    
+    submit = SubmitField('Login')
 
 
 
@@ -93,24 +101,51 @@ def home():
     else:
         return render_template('home.html')
     
-    
-
-
+  
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+
     form = LoginForm()
     
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
         if user:
+            print('użtykownik istnieje')
             salt = user.salt
             if bcrypt.check_password_hash(user.password, salt + bytes( form.password.data.encode())):
-                login_user(user)
-                return redirect(url_for('my_notes'))
+                session['potential_user_id'] = user.id
+                print('poprawne hslo')
+
+                
+                return redirect(url_for('authenticate'))
+        return render_template('login.html', form = form, msg="Błędny login lub hasło")
     
     return render_template('login.html', form = form)
 
+@app.route('/login/authenticate', methods=['GET', 'POST'])
+def authenticate():
+    if 'potential_user_id' not in session:
+        return redirect(url_for('login'))
+
+    form = AuthenticationForm()
+    user = User.query.get(int(session.get('potential_user_id', None)))
+    msg =''
+    if form.validate_on_submit():
+        cipher = AES.new(TOTP_encryption_key, AES.MODE_CBC, TOTP_iv)
+        user_totp_secret = cipher.decrypt(user.TOTP_secret)
+        
+        print(user_totp_secret)
+        totp = pyotp.TOTP(user_totp_secret)
+        print(totp.now())
+        if totp.verify(form.code.data):
+            login_user(user)
+            session.pop('potential_user_id', None)
+            
+            return redirect(url_for('home'))
+        msg='Niepoprawny kod'
+    
+    return render_template('authenticate.html',  form = form, msg = msg)
 
 @app.route('/logout', methods=['GET', 'POST'])
 @login_required
@@ -141,7 +176,7 @@ def register():
         db.session.add(new_user)
         db.session.commit()
         
-        uri = pyotp.totp.TOTP(totp_secret).provisioning_uri(name=form.username.data,
+        uri = pyotp.TOTP(totp_secret).provisioning_uri(name=form.username.data,
                                                             issuer_name="Bezpieczne notatki")
         
         return render_template('register_totp.html', uri=uri)
