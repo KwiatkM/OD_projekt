@@ -2,23 +2,78 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Notatki</title>
+    <title>Bezpieczne notatki</title>
+    <link rel="stylesheet" href="static/styles.css">
 </head>
 
 <body>
-    <h1>Rejestracja</h1>
+    <header>
+        <h1>Bezpieczne notatki</h1>
+    </header>
 
-    <form method="POST" action="">
-        {{ form.hidden_tag() }}
-        {{ form.username }}
-        {{ form.email }}
-        {{ form.password }}
-        {{ form.submit }}
+    <nav>
+        <a href="{{url_for('home')}}">Strona Główna</a>
+        <a href="{{url_for('login')}}">Logowanie</a>
+        <a href="{{url_for('register')}}">Rejestracja</a>
+    </nav>
+
+    <h1 style="text-align: center">Rejestracja</h1>
+
+    <form style="text-align: center" method="POST" action="">
+        <div>{{ form.hidden_tag() }}</div>
+        <div>{{ form.username }}</div>
+        <div>{{ form.email }}</div>
+        <div>{{ form.password }}</div>
+        <div id="password-strength">Siła hasła: <span id="strength-text">0</span></div>
+        <p style="color:gray">
+            Słabe hasło: 0 - 35 <br>
+            Średnie hasło: 36 - 59 <br>
+            Silne hasło: 60 i więcej
+        </p>
+        {% for item in msg %}
+        <div style="color:red">{{ item }}</div>
+        {% endfor %}
+        <div>{{ form.submit }}</div>
         
     </form>
 
+    <script>
+        function passwordStrength(password) {
+            let character_range = 0;
+            const regexNumbers = /\d/;
+            const regexL = /[aąbcćdeęfghijklłmnńoóprsśtuwxyzżź]/;
+            const regexU = /[AĄBCĆDEĘFGHIJKLŁMNŃOÓPRSŚTUWXYZŹŻ]/;
+            const regexSpecialSymbols= /[!@#$%^&*()_\-+={[}\]|\\;:'"<,>.?\/`~]/; //32
+            let strengthText = document.getElementById("strength-text");
+            if (regexNumbers.test(password)) {
+                character_range += 10;
+            }
+            if (regexL.test(password)) {
+                character_range += 32;
+            }
+            if (regexU.test(password)) {
+                character_range += 32;
+            }
+            if (regexSpecialSymbols.test(password)) {
+                character_range += 32;
+            }
+            if (password.length != 0){
+                strengthText.textContent = entropy(password.length, character_range).toFixed(1);
+            } else {
+                strengthText.textContent = 0;
+            }
+            
+        }
+        
+        function entropy(password_length, character_range ){
+            return password_length * Math.log2(character_range)
+        }
+        
+    </script>
+
 </body>
+
+
 
 </html>

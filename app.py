@@ -9,7 +9,6 @@ from os import urandom
 from Crypto.Cipher import AES
 import pyotp
 from time import sleep
-#import sqlite3
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
@@ -23,6 +22,7 @@ TOTP_iv=b'\x06\x17\xca=G\x97g95\x00\x95P\t\x85\xdb\x87'
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -44,50 +44,47 @@ class User(db.Model, UserMixin):
 
 with app.app_context():
     db.create_all()
+   
     
 
 class RegisterForm(FlaskForm):
-    username = StringField(validators=[InputRequired(),
-                           Length(min=3, max=30)],
-                           render_kw={"placeholder": "Username"})
-
-    password = PasswordField(validators=[InputRequired(),
-                             Length(min=3, max=30)],
-                             render_kw={"placeholder": "Password"})
+    username = StringField( validators=[InputRequired(), Length(min=3, max=30)],
+                            render_kw={"placeholder": "Nazwa użytkownika"})
     
-    email = EmailField(validators=[InputRequired(),
-                             Length(max=256)],
-                             render_kw={"placeholder": "Email"})
-
+    password = PasswordField(   validators=[InputRequired(), Length(min=3, max=30)],
+                                render_kw={"placeholder": "Hasło", "oninput":"passwordStrength(this.value)"})
+    
+    email = EmailField( validators=[InputRequired(), Length(max=256)],
+                        render_kw={"placeholder": "Email"})
+    
     submit = SubmitField('Rejestracja')
     
     def validate_username(self, username):
         existing_user_username = User.query.filter_by(
             username=username.data).first()
         if existing_user_username:
-            raise ValidationError(
-                f'Nazwa użytkownika {username.data} jest już zajęta!')
+            raise ValidationError(f"Wybrana nazwa użtykownika jest już zajęta")
     
     def validate_email(self, email):
         existing_user_email = User.query.filter_by( email=email.data).first()
         if existing_user_email:
-            raise ValidationError( "email already in use")
+            raise ValidationError( f"Wybrany adres email jest już zajęty")
         
            
        
             
 class LoginForm(FlaskForm):
-    username = StringField(validators=[
-                           InputRequired(), Length(min=1, max=30)], render_kw={"placeholder": "Username"})
+    username = StringField(validators=[InputRequired(), Length(min=1, max=30)],
+                           render_kw={"placeholder": "Nazwa użytkownika"})
 
-    password = PasswordField(validators=[
-                             InputRequired(), Length(min=1, max=30)], render_kw={"placeholder": "Password"})
+    password = PasswordField(validators=[InputRequired(), Length(min=1, max=30)],
+                             render_kw={"placeholder": "Hasło"})
 
     submit = SubmitField('Login')
 
 class AuthenticationForm(FlaskForm):
-    code = StringField(validators=[
-                           InputRequired(), Regexp('^[0-9]{1,6}$', message='Niepoprawny kod')], render_kw={"placeholder": "Code"})
+    code = StringField(validators=[InputRequired(), Regexp('^[0-9]{1,6}$')],
+                       render_kw={"placeholder": "6-cyfrowy kod"})
     
     submit = SubmitField('Login')
 
@@ -179,9 +176,13 @@ def register():
         uri = pyotp.TOTP(totp_secret).provisioning_uri(name=form.username.data,
                                                             issuer_name="Bezpieczne notatki")
         
-        return render_template('register_totp.html', uri=uri)
+        return render_template('register_totp.html', uri=uri, totp_key = totp_secret.decode("utf-8"))
     
-    return render_template('register.html', form = form)
+    
+    msg = []
+    for field, err_msg in form.errors.items():
+        msg.append(err_msg[0])
+    return render_template('register.html', form = form, msg = list(form.errors.values()))
 
 
 @app.route('/my_notes')

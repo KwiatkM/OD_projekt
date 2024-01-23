@@ -35,3 +35,8 @@ nav a:hover {
 section {
     padding: 2em;
 }
+
+input {
+    margin: 0.2em;
+}
+

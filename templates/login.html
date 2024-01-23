@@ -1,23 +1,33 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Notatki</title>
+    <title>Bezpieczne notatki</title>
+    <link rel="stylesheet" href="static/styles.css">
 </head>
 
 <body>
-    <h1>Logowanie</h1>
+    <header>
+        <h1>Bezpieczne notatki</h1>
+    </header>
 
-    <form method="POST" action="">
-        {{ form.hidden_tag() }}
-        {{ form.username }}
-        {{ form.password }}
-        {{ form.submit }}
+    <nav>
+        <a href="{{url_for('home')}}">Strona Główna</a>
+        <a href="{{url_for('login')}}">Logowanie</a>
+        <a href="{{url_for('register')}}">Rejestracja</a>
+    </nav>
+
+    <h1 style="text-align: center">Logowanie</h1>
+
+    <form style="text-align: center" method="POST" action="">
+        <div>{{ form.hidden_tag() }}</div>
+        <div>{{ form.username }}</div>
+        <div>{{ form.password }}</div>
+        <div>{{msg}}</div>
+        <div>{{ form.submit }}</div>
     </form>
-    <div>{{msg}}</div>
+    
 
 </body>
 

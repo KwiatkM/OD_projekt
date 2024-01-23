@@ -2,20 +2,33 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Notatki</title>
+    <title>Bezpieczne notatki</title>
+    <link rel="stylesheet" href="static/styles.css">
 </head>
 
-<body>
-    <h1>Rejestracja - 2FA</h1>
-    <div>Twój sekret do weryfikacij dwuetapowej:</div>
-    <p>{{uri}}</p>
+<body> 
+    <header>
+        <h1>Bezpieczne notatki</h1>
+    </header>
 
-    <div class="qrcode"></div>
-    
-    <a href="{{url_for('home')}}">Kontynuuj</a>
+    <nav>
+        <a href="{{url_for('home')}}">Strona Główna</a>
+        <a href="{{url_for('login')}}">Logowanie</a>
+        <a href="{{url_for('register')}}">Rejestracja</a>
+    </nav>
 
+    <div style="text-align: center">
+        <h1>Rejestracja - 2FA</h1>
+        <div>Twój sekret do weryfikacij dwuetapowej:</div>
+        <p>{{totp_key}}</p>
+
+        <div class="qrcode"></div>
+        
+        <a href="{{url_for('home')}}">
+            <button>Kontynuuj</button>
+        </a>
+    </div>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script>
