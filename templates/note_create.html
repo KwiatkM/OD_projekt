@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bezpieczne notatki</title>
+    <link rel="stylesheet" href="static/styles.css">
+</head>
+<body>
+
+    <header>
+        <h1>Kreator notatek</h1>
+    </header>
+
+    <form method="POST" action="">
+        <div>{{ form.hidden_tag() }}</div>
+        <div>{{ form.name }}</div>
+        <div>{{ form.content }}</div>
+        
+        <div>{{ form.submit }}</div>
+        
+    </form>
+    
+
+</body>
+</html>

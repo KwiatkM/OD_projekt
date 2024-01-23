@@ -5,3 +5,4 @@ flask_wtf
 flask_bcrypt
 pyotp
 pycryptodome
+markdown

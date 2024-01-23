@@ -5,6 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bezpieczne notatki</title>
     <link rel="stylesheet" href="static/styles.css">
+    <style>
+        .row {
+            display: flex;
+            margin: 2em;
+          }
+        .column {
+            flex: 50%;
+            margin: 1em;
+        }
+
+          
+    </style>
 </head>
 <body>
 
@@ -18,6 +30,22 @@
         <a href="{{url_for('my_notes')}}">Moje notatki</a>
         <a href="{{url_for('logout')}}">Wyloguj</a>
     </nav>
+
+    <div class="row">
+        <div class="column">
+            <div style="text-align: center">
+                <a  href="{{url_for('note_create')}}">
+                    <button >Dodaj notatkę</button>
+                </a>
+            </div>
+            <h2>Moje notatki</h2>
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam et interdum eros, vitae ornare tortor. Donec at ullamcorper velit. Nunc sollicitudin, lacus at tristique pretium, ipsum augue euismod leo, nec eleifend lacus tellus sit amet orci. Cras bibendum quam a ipsum fringilla varius. Nam pellentesque sapien condimentum, iaculis magna eget, pharetra dolor. Nullam laoreet nisi pharetra purus efficitur tempus. In eu justo at quam posuere sagittis non nec diam. Maecenas sapien nisl, rhoncus dignissim accumsan viverra, scelerisque in arcu. Cras varius felis nec eros tristique rutrum. Nam vehicula ipsum et rutrum convallis. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Sed sed magna scelerisque, ultrices ante at, tincidunt metus. 
+        </div>
+        <div class="column">
+            <h2>Notatki udostępnione</h2>
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam et interdum eros, vitae ornare tortor. Donec at ullamcorper velit. Nunc sollicitudin, lacus at tristique pretium, ipsum augue euismod leo, nec eleifend lacus tellus sit amet orci. Cras bibendum quam a ipsum fringilla varius. Nam pellentesque sapien condimentum, iaculis magna eget, pharetra dolor. Nullam laoreet nisi pharetra purus efficitur tempus. In eu justo at quam posuere sagittis non nec diam. Maecenas sapien nisl, rhoncus dignissim accumsan viverra, scelerisque in arcu. Cras varius felis nec eros tristique rutrum. Nam vehicula ipsum et rutrum convallis. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Sed sed magna scelerisque, ultrices ante at, tincidunt metus. 
+        </div>
+      </div> 
 
 </body>
 

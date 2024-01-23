@@ -2,12 +2,14 @@ from flask import Flask, render_template, url_for, redirect, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, EmailField, DecimalField
+from wtforms import StringField, PasswordField, SubmitField, EmailField, TextAreaField
 from wtforms.validators import InputRequired, Length, ValidationError, Regexp
 from flask_bcrypt import Bcrypt
 from os import urandom
 from Crypto.Cipher import AES
 import pyotp
+import markdown
+from html import escape
 from time import sleep
 
 app = Flask(__name__)
@@ -38,9 +40,19 @@ class User(db.Model, UserMixin):
     password = db.Column(db.String(128), nullable=False)
     TOTP_secret = db.Column(db.String(160), nullable=False)
     
+class Note(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False)
+    note = db.Column(db.Text, nullable=False)
+    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    is_encrypted = db.Column(db.Boolean, nullable=False)
+    is_public = db.Column(db.Boolean, nullable=False)
     
+class Note_share(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    note_id = db.Column(db.Integer, db.ForeignKey('note.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     
-
 
 with app.app_context():
     db.create_all()
@@ -81,12 +93,20 @@ class LoginForm(FlaskForm):
                              render_kw={"placeholder": "Hasło"})
 
     submit = SubmitField('Login')
+    
+
 
 class AuthenticationForm(FlaskForm):
     code = StringField(validators=[InputRequired(), Regexp('^[0-9]{1,6}$')],
                        render_kw={"placeholder": "6-cyfrowy kod"})
     
     submit = SubmitField('Login')
+    
+
+class NoteCreateForm(FlaskForm):
+    name = StringField(validators=[InputRequired()], render_kw={"placeholder": "Nazwa twojej notatki"})
+    content = TextAreaField(render_kw={"placeholder": "Tu napisz swoją notatkę", "rows":"30", "cols":"100"})
+    submit = SubmitField('Zapisz')
 
 
 
@@ -94,7 +114,7 @@ class AuthenticationForm(FlaskForm):
 @app.route('/')
 def home():
     if current_user.is_authenticated:
-        return render_template('home_logged_user.html', name = current_user.username)
+        return render_template('home_logged_user.html', name = escape(current_user.username))
     else:
         return render_template('home.html')
     
@@ -188,10 +208,29 @@ def register():
 @app.route('/my_notes')
 @login_required
 def my_notes():
-    return render_template('my_notes.html', name = current_user.username)
+    
+    
+    return render_template('my_notes.html', name = escape(current_user.username))
 
 
-
+@app.route('/my_notes/creator', methods=['GET', 'POST'])
+@login_required
+def note_create():
+    form = NoteCreateForm()
+    
+    if form.is_submitted():
+        rendered = markdown.markdown(form.content.data)
+        note = Note(name = escape(form.name.data),
+                    note = rendered,
+                    owner_id = current_user.id,
+                    is_encrypted = False,
+                    is_public = False)
+        
+        db.session.add(note)
+        db.session.commit()
+        return redirect(url_for('my_notes'))
+    
+    return render_template('note_create.html', form=form)
 
 if __name__=='__main__':
     app.run()
