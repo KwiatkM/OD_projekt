@@ -110,6 +110,10 @@ class NoteCreateForm(FlaskForm):
     content = TextAreaField(render_kw={"placeholder": "Tu napisz swoją notatkę", "rows":"30", "cols":"100"})
     password = PasswordField(validators=[Length(max=30)],render_kw={"placeholder": "Hasło"})
     submit = SubmitField('Zapisz')
+    
+class NoteDecryptForm(FlaskForm):
+    password = PasswordField(validators=[Length(max=30)],render_kw={"placeholder": "Hasło"})
+    submit = SubmitField('Kontynuuj')
 
 
 
@@ -129,6 +133,7 @@ def login():
     form = LoginForm()
     
     if form.validate_on_submit():
+        sleep(1)
         user = User.query.filter_by(username=form.username.data).first()
         if user:
             print('użtykownik istnieje')
@@ -232,7 +237,10 @@ def note_create():
             h.update(bytes(form.password.data.encode()))
             pass_hash = h.digest()
             cipher = AES.new(pass_hash, AES.MODE_CBC, note_encryption_iv)
+            #print(rendered)
             rendered = cipher.encrypt( pad(bytes(rendered.encode()), AES.block_size) )
+            #print(rendered)
+            #print(rendered.hex())
         
         note = Note(name = escape(form.name.data),
                     note = rendered,
@@ -257,8 +265,48 @@ def my_note_render(note_id):
     if note.owner_id != current_user.id:
         return 'Brak dostępu do notatki', 403
     
-    return render_template('my_notes_render.html', name=note.name, content=note.note)
+    if note.is_encrypted:
+        if 'decrypted_note_password' in session:
+            sleep(1)
+            password = session['decrypted_note_password']
+            session.pop('decrypted_note_password', None)
+            h = SHA256.new()
+            h.update(password)
+            pass_hash = h.digest()
+            try:
+                cipher = AES.new(pass_hash, AES.MODE_CBC, note_encryption_iv)
+                decrypted = cipher.decrypt( bytes(note.note))
+                decrypted = unpad(decrypted, AES.block_size)
+            except ValueError:
+                return 'Błędne hasło', 403
+            
+            return render_template('my_notes_render.html', name=note.name, content=decrypted.decode("utf-8") )
+            
+        return redirect ('/my_notes/decrypt/' + note_id)
     
+    return render_template('my_notes_render.html', name=note.name, content=note.note)
+
+@app.route('/my_notes/decrypt/<note_id>', methods=['GET', 'POST'])
+@login_required
+def note_decrypt(note_id):
+    note = Note.query.filter_by(id=note_id).first()
+    
+    if note is None:
+        return 'Notatka nie istnieje', 404
+    
+    if note.owner_id != current_user.id:
+        return 'Brak dostępu do notatki', 403
+    
+    if not note.is_encrypted:
+        return redirect (url_for('my_note_render'), note_id=note_id)
+    
+    form = NoteDecryptForm()
+    
+    if form.validate_on_submit():
+        session['decrypted_note_password'] = bytes(form.password.data.encode())
+        return redirect ('/my_notes/render/' + note_id)       
+    
+    return render_template('note_decrypt.html', form=form)
 
 if __name__=='__main__':
     app.run()
