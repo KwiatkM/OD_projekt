@@ -4,17 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bezpieczne notatki</title>
-    <link rel="stylesheet" href="static/styles.css">
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        .note_area {
+            background-color: #cccccc;
+            min-height: 400px;
+          }          
+    </style>
 </head>
 <body>
-
+    
     <header>
         {% if logged %}
         <div style="float: left">zalogowano jako: {{username}}</div>
         {% endif %}
         <h1>Bezpieczne notatki</h1>
     </header>
-
     {% if logged %}
     <nav>
         <a href="{{url_for('home')}}">Strona Główna</a>
@@ -28,16 +33,10 @@
         <a href="{{url_for('register')}}">Rejestracja</a>
     </nav>
     {% endif %}
-
-    <section>
-        <h2>Publiczne notatki</h2>
-        {% for note in notes %}
-            <div>
-                <a>{{loop.index}}. {{note.username}}: </a>
-                <a href="/render/{{note.id}}">{{note.name}}</a>
-            </div>
-        {% endfor %}
-    </section>
-
+    
+    <div style="margin: 2em">
+        <h2>{{name}}</h2>
+        <div class = "note_area">{{content | safe}}</div>
+    </div>
 </body>
 </html>

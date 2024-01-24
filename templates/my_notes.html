@@ -42,9 +42,24 @@
             {% for note in notes %}
             <div>
                 <a href="/my_notes/render/{{note.id}}">{{loop.index}}. {{note.name}}</a>
+                
                 {% if note.is_encrypted%}
                 <a style="color: #555">(Zaszyfrowane)</a>
                 {% endif %}
+
+                {% if note.is_public%}
+                <a style="color: #8ab5ac">(Dostępna publicznie)</a>
+                {% endif %}
+
+                {% if not note.is_encrypted%}
+                    {% if note.is_public %}
+                    <button><a href="/my_notes/make_private/{{note.id}}">Przestań upubliczniać</a></button>
+                    {% else %}
+                    <button><a href="/my_notes/make_public/{{note.id}}">Upublicznij</a></button>
+                    {% endif %}
+                    <br>
+
+                {% endif%}
 
             </div>
             {% endfor %}

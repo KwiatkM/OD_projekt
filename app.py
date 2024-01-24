@@ -120,10 +120,29 @@ class NoteDecryptForm(FlaskForm):
 
 @app.route('/')
 def home():
+    public_notes = db.session.query(Note.id, Note.name, User.username).join(User, User.id == Note.owner_id).filter(Note.is_public == True).all()
+    #print(public_notes)
+    
     if current_user.is_authenticated:
-        return render_template('home_logged_user.html', name = escape(current_user.username))
+        return render_template('home.html', notes = public_notes, logged = True, username = escape(current_user.username))
     else:
-        return render_template('home.html')
+        return render_template('home.html', notes = public_notes)
+    
+@app.route('/render/<note_id>')
+def render_public(note_id):
+    note = Note.query.filter_by(id=note_id).first()
+
+    if note is None:
+        return 'Notatka nie istnieje', 404
+    
+    if not note.is_public:
+        return 'Brak dostępu do notatki', 403
+    
+    if current_user.is_authenticated:
+        return render_template('public_notes_render.html', name = note.name, content = note.note, logged = True, username = escape(current_user.username) )
+    else:
+        return render_template('public_notes_render.html', name = note.name, content = note.note)
+    
     
   
 
@@ -216,8 +235,7 @@ def register():
 @app.route('/my_notes')
 @login_required
 def my_notes():
-    notes = Note.query.with_entities(Note.id, Note.name, Note.is_encrypted).filter_by(owner_id=current_user.id).all()
-    
+    notes = Note.query.with_entities(Note.id, Note.name, Note.is_encrypted, Note.is_public).filter_by(owner_id=current_user.id).all()
     
     return render_template('my_notes.html', name = escape(current_user.username), notes = notes)
 
@@ -280,11 +298,11 @@ def my_note_render(note_id):
             except ValueError:
                 return 'Błędne hasło', 403
             
-            return render_template('my_notes_render.html', name=note.name, content=decrypted.decode("utf-8") )
+            return render_template('my_notes_render.html', name=note.name, content=decrypted.decode("utf-8") , username = escape(current_user.username))
             
         return redirect ('/my_notes/decrypt/' + note_id)
     
-    return render_template('my_notes_render.html', name=note.name, content=note.note)
+    return render_template('my_notes_render.html', name=note.name, content=note.note, username = escape(current_user.username))
 
 @app.route('/my_notes/decrypt/<note_id>', methods=['GET', 'POST'])
 @login_required
@@ -307,6 +325,39 @@ def note_decrypt(note_id):
         return redirect ('/my_notes/render/' + note_id)       
     
     return render_template('note_decrypt.html', form=form)
+
+@app.route('/my_notes/make_public/<note_id>', methods=['GET', 'POST'])
+@login_required
+def make_note_public(note_id):
+    note = Note.query.filter_by(id=note_id).first()
+
+    if note is None:
+        return 'Notatka nie istnieje', 404
+    
+    if note.owner_id != current_user.id:
+        return 'Brak dostępu do notatki', 403
+    
+    if note.is_encrypted:
+        return 'Nie można upublicznić zaszyfrowanej notatki', 405
+    
+    note.is_public = True
+    db.session.commit()
+    return redirect(url_for('my_notes'))
+
+@app.route('/my_notes/make_private/<note_id>', methods=['GET', 'POST'])
+@login_required
+def make_note_private(note_id):
+    note = Note.query.filter_by(id=note_id).first()
+
+    if note is None:
+        return 'Notatka nie istnieje', 404
+    
+    if note.owner_id != current_user.id:
+        return 'Brak dostępu do notatki', 403
+    
+    note.is_public = False
+    db.session.commit()
+    return redirect(url_for('my_notes'))
 
 if __name__=='__main__':
     app.run()
