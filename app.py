@@ -115,6 +115,14 @@ class NoteDecryptForm(FlaskForm):
     password = PasswordField(validators=[Length(max=30)],render_kw={"placeholder": "Hasło"})
     submit = SubmitField('Kontynuuj')
 
+class ShareNoteForm(FlaskForm):
+    username = StringField(validators=[InputRequired(),Length(max=30)], render_kw={"placeholder": "Nazwa użytkownika"})
+    submit = SubmitField('Udostępnij')
+    def validate_username(self, username):
+        existing_user_username = User.query.filter_by(username=username.data).first()
+        if not existing_user_username:
+            raise ValidationError(f"Wybrany użytkownik nie sitnieje")
+
 
 
 
@@ -236,8 +244,12 @@ def register():
 @login_required
 def my_notes():
     notes = Note.query.with_entities(Note.id, Note.name, Note.is_encrypted, Note.is_public).filter_by(owner_id=current_user.id).all()
+    notes_shared_to_me = db.session.query( User.username, Note.id, Note.name).join(User, User.id == Note.owner_id).join(Note_share, Note_share.note_id == Note.id).filter(Note_share.user_id == current_user.id).all()
     
-    return render_template('my_notes.html', name = escape(current_user.username), notes = notes)
+    return render_template('my_notes.html',
+                           name = escape(current_user.username),
+                           notes = notes,
+                           shared_notes = notes_shared_to_me)
 
 
 @app.route('/my_notes/creator', methods=['GET', 'POST'])
@@ -272,7 +284,7 @@ def note_create():
     
     return render_template('note_create.html', form=form)
 
-@app.route('/my_notes/render/<note_id>')
+@app.route('/my_notes/render/<note_id>', methods=['GET', 'POST'])
 @login_required
 def my_note_render(note_id):
     note = Note.query.filter_by(id=note_id).first()
@@ -295,14 +307,35 @@ def my_note_render(note_id):
                 cipher = AES.new(pass_hash, AES.MODE_CBC, note_encryption_iv)
                 decrypted = cipher.decrypt( bytes(note.note))
                 decrypted = unpad(decrypted, AES.block_size)
+                note.note = decrypted.decode("utf-8")
             except ValueError:
                 return 'Błędne hasło', 403
             
-            return render_template('my_notes_render.html', name=note.name, content=decrypted.decode("utf-8") , username = escape(current_user.username))
+            return render_template('my_notes_render.html',
+                                   note=note,
+                                   #content=decrypted.decode("utf-8"),
+                                   username = escape(current_user.username))
             
         return redirect ('/my_notes/decrypt/' + note_id)
     
-    return render_template('my_notes_render.html', name=note.name, content=note.note, username = escape(current_user.username))
+    form = ShareNoteForm()
+    if form.validate_on_submit():
+        target_user = User.query.filter_by(username=form.username.data).first()
+        new_note_share = Note_share(note_id = note_id,
+                                    user_id = target_user.id)
+        
+        db.session.add(new_note_share)
+        db.session.commit()
+        #return redirect('/my_notes/render/' + note_id)
+    
+    shared_users = db.session.query(User.username).join(Note_share, User.id == Note_share.user_id).filter(Note_share.note_id == note_id).all()
+    return render_template('my_notes_render.html',
+                           note = note,
+                           username = escape(current_user.username),
+                           shareable = True,
+                           shared_users = shared_users,
+                           msg=list(form.errors.values()),
+                           form=form)
 
 @app.route('/my_notes/decrypt/<note_id>', methods=['GET', 'POST'])
 @login_required
@@ -359,5 +392,40 @@ def make_note_private(note_id):
     db.session.commit()
     return redirect(url_for('my_notes'))
 
+@app.route('/my_notes/shared/render/<note_id>', methods=['GET', 'POST'])
+@login_required
+def render_shared_note(note_id):
+    note = Note.query.filter_by(id=note_id).first()
+    is_shared = Note_share.query.filter_by(note_id=note_id, user_id=current_user.id).first() is not None
+
+    if note is None:
+        return 'Notatka nie istnieje', 404
+    
+    if not is_shared:
+        return 'Brak dostępu do notatki', 403
+    
+    return render_template('my_notes_render.html',
+                                   note=note,
+                                   username = escape(current_user.username))
+    
+    
+@app.route('/my_notes/remove_share/<note_id>', methods=['GET', 'POST'])
+@login_required
+def remove_share(note_id):
+    note = Note.query.filter_by(id=note_id).first()
+    is_shared = Note_share.query.filter_by(note_id=note_id, user_id=current_user.id).first() is not None
+
+    if note is None:
+        return 'Notatka nie istnieje', 404
+    
+    if note.owner_id != current_user.id:
+        return 'Brak dostępu do notatki', 403
+    
+    shares = Note_share.query.filter_by(note_id=note_id).all()
+    for share in shares:
+        db.session.delete(share)
+    db.session.commit()
+    return redirect ('/my_notes/render/' + note_id)
+    
 if __name__=='__main__':
     app.run()
