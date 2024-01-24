@@ -11,6 +11,8 @@ import pyotp
 import markdown
 from html import escape
 from time import sleep
+from Crypto.Util.Padding import pad, unpad
+from Crypto.Hash import SHA256
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
@@ -20,6 +22,7 @@ bcrypt = Bcrypt(app)
 
 TOTP_encryption_key = b"\x88\x95\x10\xee\x8dG!\xf9\x18\x1f\x860B\xabg'"
 TOTP_iv=b'\x06\x17\xca=G\x97g95\x00\x95P\t\x85\xdb\x87'
+note_encryption_iv = b'\xbd\xd6\xbfb\xc3\xe3\x98s\x86\xb7:\xdb\x90\x06/\xcc'
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -72,8 +75,7 @@ class RegisterForm(FlaskForm):
     submit = SubmitField('Rejestracja')
     
     def validate_username(self, username):
-        existing_user_username = User.query.filter_by(
-            username=username.data).first()
+        existing_user_username = User.query.filter_by(username=username.data).first()
         if existing_user_username:
             raise ValidationError(f"Wybrana nazwa użtykownika jest już zajęta")
     
@@ -106,6 +108,7 @@ class AuthenticationForm(FlaskForm):
 class NoteCreateForm(FlaskForm):
     name = StringField(validators=[InputRequired()], render_kw={"placeholder": "Nazwa twojej notatki"})
     content = TextAreaField(render_kw={"placeholder": "Tu napisz swoją notatkę", "rows":"30", "cols":"100"})
+    password = PasswordField(validators=[Length(max=30)],render_kw={"placeholder": "Hasło"})
     submit = SubmitField('Zapisz')
 
 
@@ -208,9 +211,10 @@ def register():
 @app.route('/my_notes')
 @login_required
 def my_notes():
+    notes = Note.query.with_entities(Note.id, Note.name, Note.is_encrypted).filter_by(owner_id=current_user.id).all()
     
     
-    return render_template('my_notes.html', name = escape(current_user.username))
+    return render_template('my_notes.html', name = escape(current_user.username), notes = notes)
 
 
 @app.route('/my_notes/creator', methods=['GET', 'POST'])
@@ -218,12 +222,22 @@ def my_notes():
 def note_create():
     form = NoteCreateForm()
     
-    if form.is_submitted():
+    if form.validate_on_submit():
         rendered = markdown.markdown(form.content.data)
+        encrypted = False
+        
+        if len(form.password.data) > 0:
+            encrypted = True
+            h = SHA256.new()
+            h.update(bytes(form.password.data.encode()))
+            pass_hash = h.digest()
+            cipher = AES.new(pass_hash, AES.MODE_CBC, note_encryption_iv)
+            rendered = cipher.encrypt( pad(bytes(rendered.encode()), AES.block_size) )
+        
         note = Note(name = escape(form.name.data),
                     note = rendered,
                     owner_id = current_user.id,
-                    is_encrypted = False,
+                    is_encrypted = encrypted,
                     is_public = False)
         
         db.session.add(note)
@@ -231,6 +245,20 @@ def note_create():
         return redirect(url_for('my_notes'))
     
     return render_template('note_create.html', form=form)
+
+@app.route('/my_notes/render/<note_id>')
+@login_required
+def my_note_render(note_id):
+    note = Note.query.filter_by(id=note_id).first()
+    
+    if note is None:
+        return 'Notatka nie istnieje', 404
+    
+    if note.owner_id != current_user.id:
+        return 'Brak dostępu do notatki', 403
+    
+    return render_template('my_notes_render.html', name=note.name, content=note.note)
+    
 
 if __name__=='__main__':
     app.run()

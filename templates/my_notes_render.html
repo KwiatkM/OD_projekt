@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bezpieczne notatki</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        .note_area {
+            background-color: #cccccc;
+            min-height: 400px;
+          }          
+    </style>
+</head>
+<body>
+
+    <header>
+        <div style="float: left">zalogowano jako: {{username}}</div>
+        <h1>Bezpieczne notatki</h1>
+    </header>
+
+    <nav>
+        <a href="{{url_for('home')}}">Strona Główna</a>
+        <a href="{{url_for('my_notes')}}">Moje notatki</a>
+        <a href="{{url_for('logout')}}">Wyloguj</a>
+    </nav>
+    <div style="margin: 2em">
+        <h2>{{name}}</h2>
+        <div class = "note_area">{{content | safe}}</div>
+    </div>
+</body>
+</html>

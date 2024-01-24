@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bezpieczne notatki</title>
-    <link rel="stylesheet" href="static/styles.css">
+    <link rel="stylesheet" href="/static/styles.css">
     <style>
         .row {
             display: flex;
@@ -39,13 +39,22 @@
                 </a>
             </div>
             <h2>Moje notatki</h2>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam et interdum eros, vitae ornare tortor. Donec at ullamcorper velit. Nunc sollicitudin, lacus at tristique pretium, ipsum augue euismod leo, nec eleifend lacus tellus sit amet orci. Cras bibendum quam a ipsum fringilla varius. Nam pellentesque sapien condimentum, iaculis magna eget, pharetra dolor. Nullam laoreet nisi pharetra purus efficitur tempus. In eu justo at quam posuere sagittis non nec diam. Maecenas sapien nisl, rhoncus dignissim accumsan viverra, scelerisque in arcu. Cras varius felis nec eros tristique rutrum. Nam vehicula ipsum et rutrum convallis. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Sed sed magna scelerisque, ultrices ante at, tincidunt metus. 
+            {% for note in notes %}
+            <div>
+                <a href="/my_notes/render/{{note.id}}">{{loop.index}}. {{note.name}}</a>
+                {% if note.is_encrypted%}
+                <a style="color: #555">(Zaszyfrowane)</a>
+                {% endif %}
+
+            </div>
+            {% endfor %}
+
         </div>
         <div class="column">
             <h2>Notatki udostępnione</h2>
             Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam et interdum eros, vitae ornare tortor. Donec at ullamcorper velit. Nunc sollicitudin, lacus at tristique pretium, ipsum augue euismod leo, nec eleifend lacus tellus sit amet orci. Cras bibendum quam a ipsum fringilla varius. Nam pellentesque sapien condimentum, iaculis magna eget, pharetra dolor. Nullam laoreet nisi pharetra purus efficitur tempus. In eu justo at quam posuere sagittis non nec diam. Maecenas sapien nisl, rhoncus dignissim accumsan viverra, scelerisque in arcu. Cras varius felis nec eros tristique rutrum. Nam vehicula ipsum et rutrum convallis. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Sed sed magna scelerisque, ultrices ante at, tincidunt metus. 
         </div>
-      </div> 
+    </div> 
 
 </body>
 
