@@ -11,7 +11,7 @@
             margin: 2em;
           }
         .column {
-            flex: 50%;
+            flex: 33%;
             margin: 1em;
         }
 
@@ -64,7 +64,7 @@
             </div>
             {% endfor %}
 
-        </div>
+        </div>  
         <div class="column">
             <h2>Notatki udostępnione</h2>
             {% for note in shared_notes %}
@@ -74,8 +74,20 @@
             </div>
             {% endfor%}
         </div>
+        <div class="column">
+            <h2>Ostatnie logowania</h2>
+            {% for log in login_log %}
+            <div>
+                <a>[{{log.info}}] <b>{{log.date}}</b> </a>
+                {% if log.was_successful %}
+                <a style="color:green" >POMYŚLNE</a>
+                {% else %}
+                <a style="color:red" >NIEPOMYŚLNE</a>
+                {% endif %}
+            </div>
+            {% endfor%}
+        </div>
     </div> 
-
 </body>
 
 </html>

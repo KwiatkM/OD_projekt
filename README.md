@@ -21,7 +21,7 @@ docker-compose down
 - szyfrowanie i odszyfrowywanie notatek na podane hasło
 - udostępnianie notatek wybranym użytkownikom (tylko niezaszyfrowane)
 - udostępnianie notatek publicznie (tylko niezaszyfrowane)
-- w notatkach można używać styli (np. pogrubienie, pochylenie, nagłówki, dodanie zdjęcia itd.)
+- w notatkach można używać podstawowych styli (np. pogrubienie, pochylenie, nagłówki, dodanie zdjęcia itd.)
 - rejestracja użytkowników
 - logowanie z użyciem uwierzytelnienia dwuskładnikowego (TOTP)
 - bezpieczne przechowywanie haseł (funkcje mieszające, sól, wielokrotne haszowanie)
@@ -29,9 +29,9 @@ docker-compose down
 - opóźnienia przy logowaniu
 - wszystkie dane wejściowe użytkownika podlegają walidacji
 - szyfrowane połączenie z aplikacją
+- kontrola liczby nieudanych prób logowania
+- zapisywanie informacji o logowaniach na konto
 
-## czego (jeszcze) nie ma:
-- weryfikacja liczby nieudanych prób logowania
 
 ## Użyte technologie
 Aplikacja została napisana w języku python przy użyciu frameworku Flask. Wykorzystuje następujące pakiety:

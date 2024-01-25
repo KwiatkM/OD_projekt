@@ -1,5 +1,6 @@
-from flask import Flask, render_template, url_for, redirect, session
+from flask import Flask, render_template, url_for, redirect, session, request
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.sql import func, desc
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, EmailField, TextAreaField
@@ -13,6 +14,7 @@ from html import escape
 from time import sleep
 from Crypto.Util.Padding import pad, unpad
 from Crypto.Hash import SHA256
+from datetime import timedelta, datetime
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
@@ -55,6 +57,20 @@ class Note_share(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     note_id = db.Column(db.Integer, db.ForeignKey('note.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    
+class Login_log(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    date = db.Column(db.DateTime, default=func.now())
+    was_successful = db.Column(db.Boolean, nullable=False)
+    info = db.Column(db.String(200), nullable=False)
+    
+def log(user_id, was_successful, info):
+    login = Login_log(  user_id = user_id,
+                        was_successful = was_successful,
+                        info = info)
+    db.session.add(login)
+    db.session.commit()
     
 
 with app.app_context():
@@ -109,7 +125,7 @@ class ShareNoteForm(FlaskForm):
     def validate_username(self, username):
         existing_user_username = User.query.filter_by(username=username.data).first()
         if not existing_user_username:
-            raise ValidationError(f"Wybrany użytkownik nie sitnieje")
+            raise ValidationError(f"Wybrany użytkownik nie istnieje")
 
 
 
@@ -153,11 +169,21 @@ def login():
         sleep(1)
         user = User.query.filter_by(username=form.username.data).first()
         if user:
+
+            # if more then 5 unsuccessful login atempts in the last 2 minutes
+            two_minutes_ago = datetime.utcnow() - timedelta(minutes=2)
+            locked = Login_log.query.filter(Login_log.user_id == user.id, Login_log.was_successful == False, Login_log.date > two_minutes_ago).count() > 5
+            if locked:
+                return render_template('login.html', form = form, msg="Zbyt dużo nieudanych prób logowania. Spróbuj ponownie za jakiś czas")
+            
             salt = user.salt
             if bcrypt.check_password_hash(user.password, salt + bytes( form.password.data.encode())):
-                session['potential_user_id'] = user.id
                 
+                session['potential_user_id'] = user.id
                 return redirect(url_for('authenticate'))
+            
+            log(user.id, False, request.remote_addr)
+                        
         return render_template('login.html', form = form, msg="Błędny login lub hasło")
     
     return render_template('login.html', form = form)
@@ -179,6 +205,7 @@ def authenticate():
         
         if totp.verify(form.code.data):
             login_user(user)
+            log(user.id, True, request.remote_addr)
             session.pop('potential_user_id', None)
             
             return redirect(url_for('home'))
@@ -231,11 +258,13 @@ def register():
 def my_notes():
     my_notes = Note.query.with_entities(Note.id, Note.name, Note.is_encrypted, Note.is_public).filter_by(owner_id=current_user.id).all()
     notes_shared_to_me = db.session.query( User.username, Note.id, Note.name).join(User, User.id == Note.owner_id).join(Note_share, Note_share.note_id == Note.id).filter(Note_share.user_id == current_user.id).all()
+    login_log = db.session.query(Login_log.date, Login_log.was_successful, Login_log.info).filter(Login_log.user_id == current_user.id).order_by(desc(Login_log.date)).limit(20).all()
     
     return render_template('my_notes.html',
                            name = current_user.username,
                            notes = my_notes,
-                           shared_notes = notes_shared_to_me)
+                           shared_notes = notes_shared_to_me,
+                           login_log = login_log)
 
 
 
