@@ -48,5 +48,5 @@ Aplikajca korzysta z serwera WSGI *Gunicorn* oraz z *Nginx* jako serwer reverse 
 
 Aplikacja posiada bazę danych SQLite. Schemat bazy danych:
 
-![](db-diagram.jpg "Diagram bazy danych aplikacji")
+![db](db-diagram.jpg "Diagram bazy danych aplikacji")
 
