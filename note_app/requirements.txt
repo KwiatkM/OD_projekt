@@ -6,3 +6,4 @@ flask_bcrypt
 pyotp
 pycryptodome
 markdown
+gunicorn
