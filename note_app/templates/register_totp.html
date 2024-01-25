@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bezpieczne notatki</title>
     <link rel="stylesheet" href="static/styles.css">
+    <style>
+        img {
+            display: block;
+            height: 50%;
+            margin: auto;
+        }
+    </style>
 </head>
 
 <body> 
@@ -23,7 +30,7 @@
         <div>Twój sekret do weryfikacij dwuetapowej:</div>
         <p>{{totp_key}}</p>
 
-        <div style="text-align: center; max-width: 400px" class="qrcode"></div>
+        <div  class="qrcode"></div>
         
         <a href="{{url_for('home')}}">
             <button>Kontynuuj</button>
@@ -34,6 +41,7 @@
     <script>
         const QRcodeImage = document.querySelector(".qrcode");
         const uri = {{uri|tojson}};
+        //const uri = "otpauth://totp/test:test?secret=64NQNK5DC77A6Y24BQ3XXJBBZHD4BODR&issuer=test";
         let qrcode = new QRCode(QRcodeImage, {
             text: uri,
             width: 300,

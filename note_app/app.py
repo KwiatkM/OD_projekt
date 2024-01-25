@@ -63,22 +63,16 @@ with app.app_context():
     
 
 class RegisterForm(FlaskForm):
-    username = StringField( validators=[InputRequired(), Length(min=3, max=30)],
-                            render_kw={"placeholder": "Nazwa użytkownika"})
-    
-    password = PasswordField(   validators=[InputRequired(), Length(min=3, max=30)],
-                                render_kw={"placeholder": "Hasło", "oninput":"passwordStrength(this.value)"})
-    
-    email = EmailField( validators=[InputRequired(), Length(max=256)],
-                        render_kw={"placeholder": "Email"})
-    
+    username = StringField( validators=[InputRequired(), Regexp('^[a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ0-9_-]{2,30}$', message="Nazwa użytkownika zawiera niedozwolone symbole"), Length(min=3, max=30)],render_kw={"placeholder": "Nazwa użytkownika"})
+    password = PasswordField( validators=[InputRequired(), Length(min=3, max=30)], render_kw={"placeholder": "Hasło", "oninput":"passwordStrength(this.value)"})
+    email = EmailField( validators=[InputRequired(), Length(max=256)],render_kw={"placeholder": "Email"})
     submit = SubmitField('Rejestracja')
     
     def validate_username(self, username):
         existing_user_username = User.query.filter_by(username=username.data).first()
         if existing_user_username:
             raise ValidationError(f"Wybrana nazwa użtykownika jest już zajęta")
-    
+       
     def validate_email(self, email):
         existing_user_email = User.query.filter_by( email=email.data).first()
         if existing_user_email:
@@ -88,25 +82,18 @@ class RegisterForm(FlaskForm):
        
             
 class LoginForm(FlaskForm):
-    username = StringField(validators=[InputRequired(), Length(min=1, max=30)],
-                           render_kw={"placeholder": "Nazwa użytkownika"})
-
-    password = PasswordField(validators=[InputRequired(), Length(min=1, max=30)],
-                             render_kw={"placeholder": "Hasło"})
-
+    username = StringField(validators=[InputRequired(), Length(min=1, max=30)], render_kw={"placeholder": "Nazwa użytkownika"})
+    password = PasswordField(validators=[InputRequired(), Length(min=1, max=30)], render_kw={"placeholder": "Hasło"})
     submit = SubmitField('Login')
     
 
-
 class AuthenticationForm(FlaskForm):
-    code = StringField(validators=[InputRequired(), Regexp('^[0-9]{1,6}$')],
-                       render_kw={"placeholder": "6-cyfrowy kod"})
-    
+    code = StringField(validators=[InputRequired(), Regexp('^[0-9]{6,6}$')],render_kw={"placeholder": "6-cyfrowy kod"})
     submit = SubmitField('Login')
     
 
 class NoteCreateForm(FlaskForm):
-    name = StringField(validators=[InputRequired()], render_kw={"placeholder": "Nazwa twojej notatki"})
+    name = StringField(validators=[InputRequired(), Length(max=30),  Regexp('^[a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ0-9_\- ]{1,30}$', message="Nazwa notatki zawiera niedozwolone symbole") ], render_kw={"placeholder": "Nazwa twojej notatki"})
     content = TextAreaField(render_kw={"placeholder": "Tu napisz swoją notatkę", "rows":"30", "cols":"100"})
     password = PasswordField(validators=[Length(max=30)],render_kw={"placeholder": "Hasło"})
     submit = SubmitField('Zapisz')
@@ -118,6 +105,7 @@ class NoteDecryptForm(FlaskForm):
 class ShareNoteForm(FlaskForm):
     username = StringField(validators=[InputRequired(),Length(max=30)], render_kw={"placeholder": "Nazwa użytkownika"})
     submit = SubmitField('Udostępnij')
+    
     def validate_username(self, username):
         existing_user_username = User.query.filter_by(username=username.data).first()
         if not existing_user_username:
@@ -135,6 +123,8 @@ def home():
         return render_template('home.html', notes = public_notes, logged = True, username = escape(current_user.username))
     else:
         return render_template('home.html', notes = public_notes)
+    
+    
     
 @app.route('/render/<note_id>')
 def render_public(note_id):
@@ -163,17 +153,16 @@ def login():
         sleep(1)
         user = User.query.filter_by(username=form.username.data).first()
         if user:
-            print('użtykownik istnieje')
             salt = user.salt
             if bcrypt.check_password_hash(user.password, salt + bytes( form.password.data.encode())):
                 session['potential_user_id'] = user.id
-                print('poprawne hslo')
-
                 
                 return redirect(url_for('authenticate'))
         return render_template('login.html', form = form, msg="Błędny login lub hasło")
     
     return render_template('login.html', form = form)
+
+
 
 @app.route('/login/authenticate', methods=['GET', 'POST'])
 def authenticate():
@@ -186,10 +175,8 @@ def authenticate():
     if form.validate_on_submit():
         cipher = AES.new(TOTP_encryption_key, AES.MODE_CBC, TOTP_iv)
         user_totp_secret = cipher.decrypt(user.TOTP_secret)
-        
-        print(user_totp_secret)
         totp = pyotp.TOTP(user_totp_secret)
-        print(totp.now())
+        
         if totp.verify(form.code.data):
             login_user(user)
             session.pop('potential_user_id', None)
@@ -199,11 +186,14 @@ def authenticate():
     
     return render_template('authenticate.html',  form = form, msg = msg)
 
+
+
 @app.route('/logout', methods=['GET', 'POST'])
 @login_required
 def logout():
     logout_user()
     return redirect(url_for('home'))
+
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -228,28 +218,25 @@ def register():
         db.session.add(new_user)
         db.session.commit()
         
-        uri = pyotp.TOTP(totp_secret).provisioning_uri(name=form.username.data,
-                                                            issuer_name="Bezpieczne notatki")
+        uri = pyotp.TOTP(totp_secret).provisioning_uri(name=form.username.data, issuer_name="Bezpieczne notatki")
         
         return render_template('register_totp.html', uri=uri, totp_key = totp_secret.decode("utf-8"))
     
-    
-    msg = []
-    for field, err_msg in form.errors.items():
-        msg.append(err_msg[0])
     return render_template('register.html', form = form, msg = list(form.errors.values()))
+
 
 
 @app.route('/my_notes')
 @login_required
 def my_notes():
-    notes = Note.query.with_entities(Note.id, Note.name, Note.is_encrypted, Note.is_public).filter_by(owner_id=current_user.id).all()
+    my_notes = Note.query.with_entities(Note.id, Note.name, Note.is_encrypted, Note.is_public).filter_by(owner_id=current_user.id).all()
     notes_shared_to_me = db.session.query( User.username, Note.id, Note.name).join(User, User.id == Note.owner_id).join(Note_share, Note_share.note_id == Note.id).filter(Note_share.user_id == current_user.id).all()
     
     return render_template('my_notes.html',
-                           name = escape(current_user.username),
-                           notes = notes,
+                           name = current_user.username,
+                           notes = my_notes,
                            shared_notes = notes_shared_to_me)
+
 
 
 @app.route('/my_notes/creator', methods=['GET', 'POST'])
@@ -267,10 +254,7 @@ def note_create():
             h.update(bytes(form.password.data.encode()))
             pass_hash = h.digest()
             cipher = AES.new(pass_hash, AES.MODE_CBC, note_encryption_iv)
-            #print(rendered)
             rendered = cipher.encrypt( pad(bytes(rendered.encode()), AES.block_size) )
-            #print(rendered)
-            #print(rendered.hex())
         
         note = Note(name = escape(form.name.data),
                     note = rendered,
@@ -282,7 +266,9 @@ def note_create():
         db.session.commit()
         return redirect(url_for('my_notes'))
     
-    return render_template('note_create.html', form=form)
+    return render_template('note_create.html', form=form, msg =  list(form.errors.values()))
+
+
 
 @app.route('/my_notes/render/<note_id>', methods=['GET', 'POST'])
 @login_required
@@ -313,7 +299,6 @@ def my_note_render(note_id):
             
             return render_template('my_notes_render.html',
                                    note=note,
-                                   #content=decrypted.decode("utf-8"),
                                    username = escape(current_user.username))
             
         return redirect ('/my_notes/decrypt/' + note_id)
@@ -326,7 +311,6 @@ def my_note_render(note_id):
         
         db.session.add(new_note_share)
         db.session.commit()
-        #return redirect('/my_notes/render/' + note_id)
     
     shared_users = db.session.query(User.username).join(Note_share, User.id == Note_share.user_id).filter(Note_share.note_id == note_id).all()
     return render_template('my_notes_render.html',
@@ -336,6 +320,8 @@ def my_note_render(note_id):
                            shared_users = shared_users,
                            msg=list(form.errors.values()),
                            form=form)
+
+
 
 @app.route('/my_notes/decrypt/<note_id>', methods=['GET', 'POST'])
 @login_required
@@ -359,6 +345,8 @@ def note_decrypt(note_id):
     
     return render_template('note_decrypt.html', form=form)
 
+
+
 @app.route('/my_notes/make_public/<note_id>', methods=['GET', 'POST'])
 @login_required
 def make_note_public(note_id):
@@ -377,6 +365,8 @@ def make_note_public(note_id):
     db.session.commit()
     return redirect(url_for('my_notes'))
 
+
+
 @app.route('/my_notes/make_private/<note_id>', methods=['GET', 'POST'])
 @login_required
 def make_note_private(note_id):
@@ -391,6 +381,8 @@ def make_note_private(note_id):
     note.is_public = False
     db.session.commit()
     return redirect(url_for('my_notes'))
+
+
 
 @app.route('/my_notes/shared/render/<note_id>', methods=['GET', 'POST'])
 @login_required
@@ -407,6 +399,7 @@ def render_shared_note(note_id):
     return render_template('my_notes_render.html',
                                    note=note,
                                    username = escape(current_user.username))
+    
     
     
 @app.route('/my_notes/remove_share/<note_id>', methods=['GET', 'POST'])
@@ -426,6 +419,8 @@ def remove_share(note_id):
         db.session.delete(share)
     db.session.commit()
     return redirect ('/my_notes/render/' + note_id)
+
+
     
 if __name__=='__main__':
     app.run()

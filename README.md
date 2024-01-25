@@ -4,7 +4,7 @@ Projekt zaliczeniowy przedmiotu *Ochrona danych w systemach informatycznych*.
 
 ## Opis
 
-Bezpieczna aplikacja internetowa pozwalająca na przechowywanie i udostępnianie notatek tekstowych. Niekóre notatki mogą być szyfrowane.
+Bezpieczna aplikacja internetowa pozwalająca na przechowywanie i udostępnianie notatek tekstowych. Niektóre notatki mogą być szyfrowane.
 
 ## Uruchomienie aplikacji
 ```

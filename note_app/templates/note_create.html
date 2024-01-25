@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bezpieczne notatki</title>
-    <link rel="stylesheet" href="static/styles.css">
 </head>
 <body>
 
@@ -20,7 +19,10 @@
         <div>{{ form.password }}</div>
         
         <div>{{ form.submit }}</div>
-        
+        <br>
+        {% if msg %}
+            <div style="color:red">{{msg[0]}}</div>
+        {% endif%}
     </form>
     
 
