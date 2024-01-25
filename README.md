@@ -10,7 +10,7 @@ Bezpieczna aplikacja internetowa pozwalająca na przechowywanie i udostępnianie
 ```
 docker-compose up --build
 ```
-Uruchomiona aplikacja działa pod adresem http://0.0.0.0:8000
+Uruchomiona aplikacja działa pod adresem https://localhost/
 
 Wyłączenie aplikacji:
 ```
@@ -28,10 +28,10 @@ docker-compose down
 - kontrola siły (entropi) hasła 
 - opóźnienia przy logowaniu
 - wszystkie dane wejściowe użytkownika podlegają walidacji
+- szyfrowane połączenie z aplikacją
 
 ## czego (jeszcze) nie ma:
 - weryfikacja liczby nieudanych prób logowania
-- szyfrowane połączenie z aplikacją
 
 ## Użyte technologie
 Aplikacja została napisana w języku python przy użyciu frameworku Flask. Wykorzystuje następujące pakiety:
